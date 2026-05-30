@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>벤츠 트럭 제주서비스 · 정비현황</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#101317;
+  --bg2:#171b21;
+  --card:#1c222a;
+  --card-line:#2a323d;
+  --txt:#eef2f6;
+  --txt2:#9aa6b4;
+  --txt3:#6b7785;
+  --blue:#3b9eff;
+  --blue-dim:#16324d;
+  --red:#ff5a4d;
+  --red-dim:#3d1714;
+  --green:#34c759;
+  --green-dim:#10381f;
+  --gray:#5b6573;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:"IBM Plex Sans KR",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+.wrap{height:100vh;display:flex;flex-direction:column;padding:clamp(14px,1.6vw,28px)}
+
+/* ===== 상단 바 ===== */
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.brand h1{font-size:clamp(20px,2vw,32px);font-weight:700;letter-spacing:-.02em}
+.brand p{color:var(--txt2);font-size:clamp(12px,1vw,15px);margin-top:2px}
+.clock{text-align:right}
+.clock .time{font-family:"IBM Plex Mono",monospace;font-size:clamp(28px,3.4vw,54px);font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.clock .date{color:var(--txt2);font-size:clamp(12px,1vw,16px);margin-top:4px}
+
+/* ===== 요약 ===== */
+.summary{display:flex;gap:clamp(8px,1vw,16px);margin:clamp(10px,1.4vh,18px) 0;flex-wrap:wrap}
+.stat{background:var(--bg2);border:1px solid var(--card-line);border-radius:12px;padding:clamp(8px,1vh,14px) clamp(12px,1.4vw,20px);flex:1;min-width:120px}
+.stat .lbl{color:var(--txt2);font-size:clamp(11px,.95vw,14px)}
+.stat .val{font-family:"IBM Plex Mono",monospace;font-size:clamp(22px,2.6vw,40px);font-weight:600;line-height:1.1;margin-top:2px}
+.stat.alarm .lbl{color:var(--red)}
+.stat.alarm .val{color:var(--red)}
+
+/* ===== 스톨 그리드 ===== */
+.grid{flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(10px,1vw,18px);min-height:0}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){.grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== 핸드폰: 화면 꽉채움 해제하고 세로 스크롤 ===== */
+@media(max-width:680px){
+  html,body{height:auto;overflow:auto}
+  .wrap{height:auto;min-height:100vh}
+  .grid{grid-template-columns:1fr}
+  .stall{min-height:auto}
+  .clock .time{font-size:34px}
+}
+@media(max-width:430px){
+  .summary .stat{min-width:calc(50% - 6px)}
+}
+
+.stall{
+  background:var(--card);
+  border:1px solid var(--card-line);
+  border-top:5px solid var(--gray);
+  border-radius:14px;
+  padding:clamp(12px,1.3vw,20px);
+  display:flex;flex-direction:column;
+  min-height:0;overflow:hidden;
+  transition:border-color .3s;
+}
+.stall.s-work{border-top-color:var(--blue)}
+.stall.s-part{border-top-color:var(--red)}
+.stall.s-out{border-top-color:var(--green)}
+.stall.empty{background:var(--bg2);border-style:dashed;border-top-style:dashed;border-top-color:var(--card-line);justify-content:center;align-items:center;text-align:center}
+
+.stall .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(8px,1vh,14px)}
+.stall .no{font-size:clamp(15px,1.3vw,22px);font-weight:700}
+.badge{font-size:clamp(11px,.95vw,15px);font-weight:600;padding:4px 12px;border-radius:999px;white-space:nowrap}
+.badge.s-work{background:var(--blue-dim);color:var(--blue)}
+.badge.s-part{background:var(--red-dim);color:var(--red)}
+.badge.s-out{background:var(--green-dim);color:var(--green)}
+
+/* 카드 내부 그룹: 차량 / 작업 / 비고 사이를 띄워 시인성 향상 */
+.sec{margin-top:clamp(10px,1.4vh,18px)}
+.sec-veh{margin-top:0}
+.plate{font-family:"IBM Plex Mono",monospace;font-size:clamp(18px,1.8vw,30px);font-weight:600;letter-spacing:.01em}
+.model{color:var(--txt2);font-size:clamp(12px,1vw,17px);margin-top:2px}
+.task{font-size:clamp(13px,1.15vw,19px);font-weight:500;line-height:1.35}
+.meta{margin-top:auto;padding-top:clamp(8px,1vh,14px);border-top:1px solid var(--card-line)}
+.meta .row{display:flex;justify-content:space-between;gap:8px;font-size:clamp(11px,.95vw,15px);color:var(--txt2);margin-top:4px}
+.meta .row b{color:var(--txt);font-weight:500}
+.meta .row .mono{font-family:"IBM Plex Mono",monospace}
+.sec-note{border-left:3px solid var(--card-line);padding-left:10px}
+.note{color:var(--txt2);font-size:clamp(12px,1vw,17px);line-height:1.4}
+
+.delay{display:inline-flex;align-items:center;gap:5px;color:var(--red);font-size:clamp(11px,.95vw,15px);font-weight:600;margin-top:6px}
+.delay .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.empty .no{color:var(--txt2)}
+.empty .ph{color:var(--txt3);font-size:clamp(12px,1vw,16px);margin-top:8px}
+
+/* ===== 하단: 대기열 + 상태 ===== */
+.foot{display:flex;align-items:center;gap:10px 16px;margin-top:clamp(10px,1.2vh,16px);flex-wrap:wrap;flex-shrink:0}
+.queue{flex:1 1 100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:1px}
+.queue.filled{background:var(--bg2);border:1px solid var(--card-line);border-radius:12px;padding:clamp(8px,1vh,14px) clamp(12px,1.3vw,20px)}
+.queue .qlabel{color:var(--txt);font-weight:600;font-size:clamp(13px,1.1vw,18px);margin-right:4px}
+.qitem{display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--card-line);border-radius:8px;padding:7px 15px}
+.qitem .qcar{font-size:clamp(13px,1.1vw,18px);font-family:"IBM Plex Mono",monospace;font-weight:600}
+.qitem .qsub{font-size:clamp(11px,.9vw,14px);color:var(--txt2);font-family:"IBM Plex Sans KR",sans-serif}
+.qitem.urgent{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+.qitem.urgent .qsub{color:#ffb3ad}
+.conn{display:flex;align-items:center;gap:8px;font-size:clamp(11px,.9vw,14px);color:var(--txt2);margin-left:auto}
+.conn .led{width:9px;height:9px;border-radius:50%;background:var(--green)}
+.conn.off .led{background:var(--red)}
+.conn.demo .led{background:#e6a23c}
+
+.banner{background:var(--red-dim);border:1px solid var(--red);color:#ffd2cd;border-radius:10px;padding:10px 16px;font-size:14px;margin-bottom:12px;display:none}
+.banner.show{display:block}
+
+@media(prefers-reduced-motion:no-preference){
+  .delay .dot,.conn.demo .led,.conn.off .led{animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="banner" class="banner"></div>
+
+  <div class="top">
+    <div class="brand">
+      <h1>벤츠 트럭 제주서비스 · 정비현황</h1>
+      <p>실시간 작업스톨 모니터링</p>
+    </div>
+    <div class="clock">
+      <div class="time" id="clock">--:--:--</div>
+      <div class="date" id="date"></div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="stat"><div class="lbl">가동 스톨</div><div class="val" id="s-active">–</div></div>
+    <div class="stat"><div class="lbl">작업중</div><div class="val" id="s-work">–</div></div>
+    <div class="stat alarm"><div class="lbl">부품대기 · 지연</div><div class="val" id="s-part">–</div></div>
+    <div class="stat"><div class="lbl">출고대기</div><div class="val" id="s-out">–</div></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="foot">
+    <div class="queue" id="queue"></div>
+    <div class="conn" id="conn"><span class="led"></span><span id="conn-txt">연결 중…</span></div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   설정 — 이 부분만 바꾸면 됩니다
+   ============================================================ */
+const CONFIG = {
+  // 구글시트 주소(URL)에서 /d/ 와 /edit 사이의 긴 문자열을 붙여넣으세요.
+  SHEET_ID: "1uFoRZqm5DXZaNJ1qskO-8TXAtnGe32hunO_sp_gyw-A",
+  // 시트 탭의 gid (URL의 ...#gid=0 숫자). 첫 번째 탭은 보통 0.
+  SHEET_GID: "0",
+  // (gid를 못 쓸 때 대비) 시트 탭 이름
+  SHEET_NAME: "시트1",
+  // 새로고침 간격(초)
+  REFRESH_SEC: 15,
+  // (선택) '웹에 게시'로 만든 CSV 주소가 있으면 여기에 넣으세요. 비우면 시트 ID로 자동 연결.
+  CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTi8q1g8q1S06k14G2gjH0D4homHhl-NWIvl8CtcRAvCzegXH2n-XJGOk5hsgoMOfFjpX7g09oiKSHp/pub?gid=0&single=true&output=csv"
+};
+
+/* ============================================================
+   상태 정의 — 작업중 / 부품대기 / 출고대기
+   ============================================================ */
+const STATUS = {
+  "작업중":   {cls:"s-work", label:"작업중"},
+  "부품대기": {cls:"s-part", label:"부품대기 · 지연"},
+  "출고대기": {cls:"s-out",  label:"출고대기"}
+};
+const STALL_COUNT = 5;
+
+/* 상태 글자에 군더더기(예: "부품대기(지연)")가 붙어 있어도 키워드로 인식 */
+function matchStatus(raw){
+  const s=(raw||"").replace(/\s/g,"");
+  if(!s) return null;
+  if(STATUS[s]) return STATUS[s];
+  for(const key in STATUS){ if(s.indexOf(key)>=0) return STATUS[key]; }
+  return null;
+}
+
+/* 데모 데이터 (연결 전 / 연결 실패 시 화면 확인용) */
+const DEMO = [
+  {스톨:"1", 차량번호:"81바3092", 차종:"악트로스 2545", 작업내용:"엔진오일·미션오일 교환", 담당:"김정비", 상태:"작업중",   입고시간:"09:10", 작업완료:"11:30", 비고:""},
+  {스톨:"2", 차량번호:"79오5510", 차종:"아록스",         작업내용:"브레이크 패드·디스크 교환", 담당:"박정비", 상태:"부품대기", 입고시간:"08:40", 작업완료:"13:00", 비고:"우측 디스크 14:00 입고예정"},
+  {스톨:"3", 차량번호:"311조4471", 차종:"악트로스 1845", 작업내용:"정기점검(A서비스)",       담당:"이정비", 상태:"작업중",   입고시간:"10:00", 작업완료:"10:50", 비고:""},
+  {스톨:"4", 차량번호:"", 차종:"", 작업내용:"", 담당:"", 상태:"", 입고시간:"", 작업완료:"", 비고:""},
+  {스톨:"5", 차량번호:"05우2837", 차종:"아테고",         작업내용:"에어서스펜션 수리",     담당:"최정비", 상태:"출고대기", 입고시간:"07:50", 작업완료:"11:00", 비고:"세차 진행 중"},
+  {스톨:"대기", 차량번호:"88바1199", 차종:"악트로스", 작업내용:"", 담당:"", 상태:"", 입고시간:"", 작업완료:"11:00 예약", 비고:""},
+  {스톨:"대기", 차량번호:"47호3021", 차종:"아록스",   작업내용:"", 담당:"", 상태:"", 입고시간:"", 작업완료:"긴급", 비고:"urgent"}
+];
+
+/* ---------- 시계 ---------- */
+function pad(n){return String(n).padStart(2,"0")}
+function tickClock(){
+  const d=new Date();
+  document.getElementById("clock").textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const days=["일","월","화","수","목","금","토"];
+  document.getElementById("date").textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+}
+setInterval(tickClock,1000); tickClock();
+
+/* ---------- CSV 파서 ---------- */
+function parseCSV(text){
+  text=text.replace(/^﻿/,"");
+  const rows=[]; let row=[], cell="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; }
+      else cell+=c;
+    }else{
+      if(c==='"') q=true;
+      else if(c===',') {row.push(cell);cell="";}
+      else if(c==='\n'){row.push(cell);rows.push(row);row=[];cell="";}
+      else if(c==='\r'){}
+      else cell+=c;
+    }
+  }
+  if(cell!==""||row.length){row.push(cell);rows.push(row);}
+  return rows;
+}
+function rowsToObjects(rows){
+  if(!rows.length) return [];
+  const head=rows[0].map(h=>h.trim());
+  return rows.slice(1).map(r=>{
+    const o={}; head.forEach((h,i)=>o[h]=(r[i]||"").trim()); return o;
+  });
+}
+
+/* ---------- 지연 판단 ---------- */
+function isOverdue(eta){
+  const m=/^(\d{1,2}):(\d{2})/.exec(eta||"");
+  if(!m) return false;
+  const now=new Date();
+  const due=new Date(); due.setHours(+m[1],+m[2],0,0);
+  return now>due;
+}
+
+/* ---------- 렌더링 ---------- */
+function render(records){
+  const byStall={};
+  const queue=[];
+  records.forEach(r=>{
+    const s=(r["스톨"]||"").trim();
+    if(/^[1-9]$/.test(s)) byStall[s]=r;
+    // 스톨이 '대기'이거나, 스톨칸이 비어 있어도 차량번호가 있으면 대기열로
+    else if(s==="대기"||s==="입고대기"||(!/^[1-9]$/.test(s)&&(r["차량번호"]||"").trim())) queue.push(r);
+  });
+
+  let nWork=0,nPart=0,nOut=0,nActive=0;
+  const grid=document.getElementById("grid");
+  grid.innerHTML="";
+
+  for(let i=1;i<=STALL_COUNT;i++){
+    const r=byStall[String(i)];
+    const div=document.createElement("div");
+    div.className="stall";
+
+    const status=r?(r["상태"]||"").trim():"";
+    const info=matchStatus(status);
+
+    if(!r || !r["차량번호"] || !info){
+      div.classList.add("empty");
+      div.innerHTML=`<div class="no">${i}번 스톨</div><div class="ph">비어 있음 · 배정 대기</div>`;
+      grid.appendChild(div);
+      continue;
+    }
+
+    nActive++;
+    if(info.cls==="s-work")nWork++;
+    else if(info.cls==="s-part")nPart++;
+    else if(info.cls==="s-out")nOut++;
+
+    div.classList.add(info.cls);
+
+    const overdue = (info.cls==="s-work") && isOverdue(r["작업완료"]);
+    const delayHTML = (info.cls==="s-part")
+      ? `<div class="delay"><span class="dot"></span>부품 입고 지연</div>`
+      : overdue ? `<div class="delay"><span class="dot"></span>작업시간 초과</div>` : "";
+
+    div.innerHTML=`
+      <div class="head">
+        <span class="no">${i}번 스톨</span>
+        <span class="badge ${info.cls}">${info.label}</span>
+      </div>
+      <div class="sec sec-veh">
+        <div class="plate">${esc(r["차량번호"])}</div>
+        <div class="model">${esc(r["차종"]||"")}</div>
+      </div>
+      <div class="sec sec-task">
+        <div class="task">${esc(r["작업내용"]||"")}</div>
+        ${delayHTML}
+      </div>
+      ${r["비고"]?`<div class="sec sec-note"><div class="note">${esc(r["비고"])}</div></div>`:""}
+      <div class="meta">
+        <div class="row"><span>담당</span><b>${esc(r["담당"]||"-")}</b></div>
+        <div class="row"><span>입고 → 작업완료</span><b class="mono">${esc(r["입고시간"]||"-")} → ${esc(r["작업완료"]||"-")}</b></div>
+      </div>`;
+    grid.appendChild(div);
+  }
+
+  document.getElementById("s-active").textContent=`${nActive} / ${STALL_COUNT}`;
+  document.getElementById("s-work").textContent=nWork;
+  document.getElementById("s-part").textContent=nPart;
+  document.getElementById("s-out").textContent=nOut;
+
+  const q=document.getElementById("queue");
+  if(queue.length){
+    q.className="queue filled";
+    q.innerHTML=`<span class="qlabel">입고 대기 (${queue.length})</span>`+queue.map(r=>{
+      const urgent=/긴급|urgent/i.test((r["비고"]||"")+(r["작업완료"]||""));
+      // 부가 정보: 작업내용 → 비고 → 작업완료 순으로 있는 것만 표시
+      const detail=[r["작업내용"], (r["비고"]||"").replace(/urgent/i,"긴급"), (r["작업완료"]||"").replace(/urgent/i,"긴급")]
+        .map(x=>(x||"").trim()).filter(Boolean).join(" · ");
+      const sub=detail?`<span class="qsub">${esc(detail)}</span>`:"";
+      return `<span class="qitem${urgent?" urgent":""}">`
+           +`<span class="qcar">${esc(r["차량번호"])} ${esc(r["차종"]||"")}</span>${sub}</span>`;
+    }).join("");
+  }else{ q.className="queue"; q.innerHTML=""; }
+}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+
+/* ---------- 연결 상태 표시 ---------- */
+function setConn(state,msg){
+  const c=document.getElementById("conn");
+  c.className="conn"+(state==="off"?" off":state==="demo"?" demo":"");
+  document.getElementById("conn-txt").textContent=msg;
+  const b=document.getElementById("banner");
+  if(state==="off"){b.className="banner show";b.textContent=msg;}
+  else b.className="banner";
+}
+
+/* ---------- 데이터 가져오기 (JSONP 방식) ----------
+   파일을 더블클릭(file://)으로 열어도 작동하도록 fetch 대신
+   <script> 태그로 구글시트 gviz JSON을 불러옵니다 (CORS 우회). */
+
+/* gviz JSON 응답을 헤더(라벨) 기준 객체 배열로 변환 */
+function gvizToRecords(resp){
+  const t=resp&&resp.table;
+  if(!t||!t.cols) return [];
+  const labels=t.cols.map(c=>(c.label||"").trim());
+  return (t.rows||[]).map(row=>{
+    const o={};
+    labels.forEach((lab,i)=>{
+      if(!lab) return;
+      const cell=row.c?row.c[i]:null;
+      let val="";
+      if(cell){
+        // 숫자/날짜는 보기 좋은 형식(f)을, 일반 텍스트는 값(v)을 사용
+        if(cell.f!=null && cell.f!=="") val=cell.f;
+        else if(cell.v!=null) val=cell.v;
+      }
+      // "9:10:00" 처럼 초가 붙은 시간은 "9:10" 으로 정리
+      val=String(val).trim().replace(/^(\d{1,2}):(\d{2}):00$/,"$1:$2");
+      o[lab]=val;
+    });
+    return o;
+  });
+}
+
+/* gviz JSONP 호출: 콜백 함수를 만들어 script 태그로 불러옴 */
+function loadSheet(){
+  return new Promise((resolve,reject)=>{
+    const cb="__gviz_"+Date.now();
+    const s=document.createElement("script");
+    let done=false;
+    const cleanup=()=>{ try{delete window[cb];}catch(_){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); };
+    window[cb]=function(resp){ done=true; cleanup(); resolve(resp); };
+    s.onerror=function(){ if(!done){ cleanup(); reject(new Error("스크립트 로드 실패")); } };
+    const id=CONFIG.SHEET_ID;
+    const tab = CONFIG.SHEET_GID!=="" ? `gid=${encodeURIComponent(CONFIG.SHEET_GID)}` : `sheet=${encodeURIComponent(CONFIG.SHEET_NAME)}`;
+    s.src=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json;responseHandler:${cb}&headers=1&${tab}&_=${Date.now()}`;
+    document.head.appendChild(s);
+    setTimeout(()=>{ if(!done){ cleanup(); reject(new Error("시간초과")); } }, 12000);
+  });
+}
+
+async function fetchData(){
+  if(CONFIG.SHEET_ID.includes("붙여넣기")){
+    render(DEMO);
+    setConn("demo","데모 데이터 · 실제 사용시 구글시트 ID를 입력하세요");
+    return;
+  }
+  try{
+    const resp=await loadSheet();
+    const records=gvizToRecords(resp);
+    if(!records.length) throw new Error("데이터 없음");
+    render(records);
+    const t=new Date();
+    setConn("ok",`연결됨 · ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())} 갱신`);
+  }catch(e){
+    render(DEMO);
+    setConn("off","구글시트 연결 실패("+e.message+"). 시트 공유 설정(링크가 있는 모든 사용자·뷰어)과 인터넷 연결을 확인하세요. 지금은 데모 데이터를 표시합니다.");
+  }
+}
+fetchData();
+setInterval(fetchData, CONFIG.REFRESH_SEC*1000);
+</script>
+</body>
+</html>
