@@ -114,15 +114,19 @@ body{
   padding:clamp(10px,1.1vh,16px) clamp(12px,1.4vw,22px)}
 .reqbar.show{display:block}
 .reqbar .rb-head{display:flex;align-items:center;gap:8px;color:var(--blue);
-  font-weight:700;font-size:clamp(13px,1.1vw,18px);margin-bottom:8px}
-.reqbar .rb-list{display:flex;flex-wrap:wrap;gap:8px 12px}
-.reqbar .rb-item{display:flex;align-items:baseline;gap:8px;
-  background:var(--card);border:1px solid var(--card-line);border-radius:9px;
-  padding:8px 14px;flex:1 1 280px;min-width:240px}
+  font-weight:700;font-size:clamp(13px,1.1vw,18px);margin-bottom:10px}
+.reqbar .rb-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(8px,.8vw,14px)}
+@media(max-width:1100px){.reqbar .rb-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){.reqbar .rb-grid{grid-template-columns:1fr}}
+.reqbar .rb-item{display:flex;flex-direction:column;gap:5px;
+  background:var(--card);border:1px solid var(--card-line);border-radius:9px;padding:10px 14px}
+.reqbar .rb-item.rb-empty{background:transparent;border-style:dashed;opacity:.5}
+.reqbar .rb-top{display:flex;align-items:baseline;gap:8px}
 .reqbar .rb-no{flex-shrink:0;font-family:"IBM Plex Mono",monospace;font-weight:700;
   color:var(--blue);font-size:clamp(13px,1.1vw,18px)}
 .reqbar .rb-car{flex-shrink:0;color:var(--txt2);font-size:clamp(11px,.9vw,14px);font-family:"IBM Plex Mono",monospace}
 .reqbar .rb-text{color:var(--txt);font-size:clamp(13px,1.15vw,19px);font-weight:500;line-height:1.35}
+.reqbar .rb-text.rb-none{color:var(--txt3);font-weight:400;font-size:clamp(12px,1vw,15px)}
 
 /* ===== 하단: 대기열 + 상태 ===== */
 .foot{display:flex;align-items:center;gap:10px 16px;margin-top:clamp(10px,1.2vh,16px);flex-wrap:wrap;flex-shrink:0}
@@ -458,16 +462,24 @@ function render(records){
   document.getElementById("s-part").textContent=nPart;
   document.getElementById("s-out").textContent=nOut;
 
-  // ----- 작업자 요청사항 배너 -----
+  // ----- 작업자 요청사항 배너 (스톨번호별 칸으로 분리, 위 그리드와 정렬) -----
   const rb=document.getElementById("reqbar");
   if(requests.length){
+    const byNo={}; requests.forEach(q=>byNo[q.no]=q);
     rb.className="reqbar show";
-    rb.innerHTML=`<div class="rb-head">📢 작업자 요청사항 (${requests.length})</div>`
-      +`<div class="rb-list">`+requests.map(q=>
-         `<div class="rb-item"><span class="rb-no">${q.no}번</span>`
-         +`<span class="rb-car">${esc(q.car)}</span>`
-         +`<span class="rb-text">${esc(q.text)}</span></div>`
-       ).join("")+`</div>`;
+    let cells="";
+    for(let i=1;i<=STALL_COUNT;i++){
+      const q=byNo[i];
+      if(q){
+        cells+=`<div class="rb-item"><div class="rb-top"><span class="rb-no">${i}번</span>`
+              +`<span class="rb-car">${esc(q.car)}</span></div>`
+              +`<div class="rb-text">${esc(q.text)}</div></div>`;
+      }else{
+        cells+=`<div class="rb-item rb-empty"><div class="rb-top"><span class="rb-no">${i}번</span></div>`
+              +`<div class="rb-text rb-none">요청 없음</div></div>`;
+      }
+    }
+    rb.innerHTML=`<div class="rb-head">📢 작업자 요청사항</div><div class="rb-grid">${cells}</div>`;
   }else{ rb.className="reqbar"; rb.innerHTML=""; }
 
   const q=document.getElementById("queue");
