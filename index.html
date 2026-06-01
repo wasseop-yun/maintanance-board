@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>벤츠 트럭 제주서비스 · 정비현황</title>
+<title>벤츠 트럭 전주서비스 · 정비현황</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -100,6 +100,9 @@ body{
 .meta .row{display:flex;justify-content:space-between;gap:8px;font-size:clamp(11px,.95vw,15px);color:var(--txt2);margin-top:4px}
 .meta .row b{color:var(--txt);font-weight:500}
 .meta .row .mono{font-family:"IBM Plex Mono",monospace}
+.sec-req{border-left:3px solid var(--blue);padding-left:10px}
+.req-label{color:var(--blue);font-size:clamp(11px,.9vw,14px);font-weight:600;margin-bottom:2px}
+.req{color:var(--txt);font-size:clamp(13px,1.1vw,18px);line-height:1.4;font-weight:500}
 .sec-note{border-left:3px solid var(--card-line);padding-left:10px}
 .note{color:var(--txt2);font-size:clamp(12px,1vw,17px);line-height:1.4}
 
@@ -126,6 +129,19 @@ body{
 .banner{background:var(--red-dim);border:1px solid var(--red);color:#ffd2cd;border-radius:10px;padding:10px 16px;font-size:14px;margin-bottom:12px;display:none}
 .banner.show{display:block}
 
+/* ===== 변경 알람 토스트 ===== */
+.toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-20px);
+  background:var(--blue-dim);border:1px solid var(--blue);color:var(--txt);
+  border-radius:12px;padding:14px 26px;font-size:clamp(15px,1.4vw,22px);font-weight:600;
+  box-shadow:0 10px 40px rgba(0,0,0,.5);z-index:100;opacity:0;pointer-events:none;
+  transition:opacity .3s,transform .3s;max-width:80vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast .ic{margin-right:8px}
+
+/* 변경된 카드 강조 점멸 */
+.stall.flash{animation:cardflash 1.2s ease-out 3}
+@keyframes cardflash{0%,100%{box-shadow:0 0 0 0 rgba(59,158,255,0)}50%{box-shadow:0 0 0 3px rgba(59,158,255,.9)}}
+
 @media(prefers-reduced-motion:no-preference){
   .delay .dot,.conn.demo .led,.conn.off .led{animation:pulse 1.4s ease-in-out infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -136,10 +152,11 @@ body{
 <div class="wrap">
 
   <div id="banner" class="banner"></div>
+  <div id="toast" class="toast"></div>
 
   <div class="top">
     <div class="brand">
-      <h1>벤츠 트럭 제주서비스 · 정비현황</h1>
+      <h1>벤츠 트럭 전주서비스 · 정비현황</h1>
       <p>실시간 작업스톨 모니터링</p>
     </div>
     <div class="clock">
@@ -151,8 +168,8 @@ body{
   <div class="summary">
     <div class="stat"><div class="lbl">가동 스톨</div><div class="val" id="s-active">–</div></div>
     <div class="stat"><div class="lbl">작업중</div><div class="val" id="s-work">–</div></div>
-    <div class="stat alarm"><div class="lbl">부품대기 · 지연</div><div class="val" id="s-part">–</div></div>
-    <div class="stat"><div class="lbl">출고대기</div><div class="val" id="s-out">–</div></div>
+    <div class="stat alarm"><div class="lbl">부품대기</div><div class="val" id="s-part">–</div></div>
+    <div class="stat"><div class="lbl">작업완료</div><div class="val" id="s-out">–</div></div>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -182,12 +199,13 @@ const CONFIG = {
 };
 
 /* ============================================================
-   상태 정의 — 작업중 / 부품대기 / 출고대기
+   상태 정의 — 작업중 / 부품대기 / 작업완료
    ============================================================ */
 const STATUS = {
   "작업중":   {cls:"s-work", label:"작업중"},
-  "부품대기": {cls:"s-part", label:"부품대기 · 지연"},
-  "출고대기": {cls:"s-out",  label:"출고대기"}
+  "부품대기": {cls:"s-part", label:"부품대기"},
+  "작업완료": {cls:"s-out",  label:"작업완료"},
+  "출고대기": {cls:"s-out",  label:"작업완료"}   // 예전 표기 호환
 };
 const STALL_COUNT = 5;
 
@@ -202,13 +220,13 @@ function matchStatus(raw){
 
 /* 데모 데이터 (연결 전 / 연결 실패 시 화면 확인용) */
 const DEMO = [
-  {스톨:"1", 차량번호:"81바3092", 차종:"악트로스 2545", 작업내용:"엔진오일·미션오일 교환", 담당:"김정비", 상태:"작업중",   입고시간:"09:10", 작업완료:"11:30", 비고:""},
-  {스톨:"2", 차량번호:"79오5510", 차종:"아록스",         작업내용:"브레이크 패드·디스크 교환", 담당:"박정비", 상태:"부품대기", 입고시간:"08:40", 작업완료:"13:00", 비고:"우측 디스크 14:00 입고예정"},
-  {스톨:"3", 차량번호:"311조4471", 차종:"악트로스 1845", 작업내용:"정기점검(A서비스)",       담당:"이정비", 상태:"작업중",   입고시간:"10:00", 작업완료:"10:50", 비고:""},
-  {스톨:"4", 차량번호:"", 차종:"", 작업내용:"", 담당:"", 상태:"", 입고시간:"", 작업완료:"", 비고:""},
-  {스톨:"5", 차량번호:"05우2837", 차종:"아테고",         작업내용:"에어서스펜션 수리",     담당:"최정비", 상태:"출고대기", 입고시간:"07:50", 작업완료:"11:00", 비고:"세차 진행 중"},
-  {스톨:"대기", 차량번호:"88바1199", 차종:"악트로스", 작업내용:"", 담당:"", 상태:"", 입고시간:"", 작업완료:"11:00 예약", 비고:""},
-  {스톨:"대기", 차량번호:"47호3021", 차종:"아록스",   작업내용:"", 담당:"", 상태:"", 입고시간:"", 작업완료:"긴급", 비고:"urgent"}
+  {스톨:"1", 차량번호:"81바3092", 차종:"악트로스 2545", 작업내용:"엔진오일·미션오일 교환", 담당:"김정비", 상태:"작업중",   입고시간:"09:10", 작업완료예상:"11:30", 요청사항:"오일 잔량 사진 남겨주세요", 비고:""},
+  {스톨:"2", 차량번호:"79오5510", 차종:"아록스",         작업내용:"브레이크 패드·디스크 교환", 담당:"박정비", 상태:"부품대기", 입고시간:"08:40", 작업완료예상:"13:00", 요청사항:"", 비고:"우측 디스크 14:00 입고예정"},
+  {스톨:"3", 차량번호:"311조4471", 차종:"악트로스 1845", 작업내용:"정기점검(A서비스)",       담당:"이정비", 상태:"작업중",   입고시간:"10:00", 작업완료예상:"10:50", 요청사항:"하부 누유 점검 요청", 비고:""},
+  {스톨:"4", 차량번호:"", 차종:"", 작업내용:"", 담당:"", 상태:"", 입고시간:"", 작업완료예상:"", 요청사항:"", 비고:""},
+  {스톨:"5", 차량번호:"05우2837", 차종:"아테고",         작업내용:"에어서스펜션 수리",     담당:"최정비", 상태:"작업완료", 입고시간:"07:50", 작업완료예상:"11:00", 요청사항:"", 비고:"세차 진행 중"},
+  {스톨:"대기", 차량번호:"88바1199", 차종:"악트로스", 작업내용:"엔진 경고등 점검", 담당:"", 상태:"", 입고시간:"", 작업완료예상:"11:00 예약", 요청사항:"", 비고:""},
+  {스톨:"대기", 차량번호:"47호3021", 차종:"아록스",   작업내용:"타이어 4본 교체", 담당:"", 상태:"", 입고시간:"", 작업완료예상:"긴급", 요청사항:"", 비고:"urgent"}
 ];
 
 /* ---------- 시계 ---------- */
@@ -258,8 +276,77 @@ function isOverdue(eta){
   return now>due;
 }
 
+/* ---------- 변경 감지용 스냅샷 ---------- */
+let prevSnap=null;          // 이전 데이터 지문(스톨/대기별)
+function snapKey(r){
+  // 의미 있는 칸만 모아 지문 생성 (한 칸이라도 바뀌면 달라짐)
+  return ["차량번호","차종","작업내용","담당","상태","입고시간","작업완료예상","작업완료","요청사항","작업자요청사항","비고"]
+    .map(k=>(r[k]||"").trim()).join("|");
+}
+function buildSnap(records){
+  const m={};
+  records.forEach(r=>{
+    const s=(r["스톨"]||"").trim();
+    const car=(r["차량번호"]||"").trim();
+    if(!car) return;
+    const id = /^[1-9]$/.test(s) ? ("스톨"+s) : ("대기:"+car);
+    m[id]=snapKey(r);
+  });
+  return m;
+}
+/* 변경 알람: 첫 로딩은 조용히, 이후 변경분만 알림 */
+function detectChanges(records){
+  const snap=buildSnap(records);
+  const changedStalls=[];
+  if(prevSnap){
+    const labels=[];
+    // 신규/수정
+    for(const id in snap){
+      if(prevSnap[id]!==snap[id]){
+        if(id.startsWith("스톨")) changedStalls.push(id.replace("스톨",""));
+        labels.push(id.startsWith("스톨")? (id.replace("스톨","")+"번 스톨") : "입고대기");
+      }
+    }
+    // 삭제(출고/제거)
+    for(const id in prevSnap){
+      if(!(id in snap)) labels.push(id.startsWith("스톨")? (id.replace("스톨","")+"번 스톨 비움") : "입고대기 변경");
+    }
+    if(labels.length){
+      const uniq=[...new Set(labels)];
+      notifyChange(uniq.join(", "));
+    }
+  }
+  prevSnap=snap;
+  return changedStalls;
+}
+function notifyChange(text){
+  const t=document.getElementById("toast");
+  const now=new Date();
+  t.innerHTML=`<span class="ic">🔔</span>업데이트: ${esc(text)} <span style="opacity:.7;font-weight:400">(${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())})</span>`;
+  t.classList.add("show");
+  clearTimeout(notifyChange._h);
+  notifyChange._h=setTimeout(()=>t.classList.remove("show"),6000);
+  beep();
+}
+/* 짧은 알림음 (외부 파일 없이 Web Audio로 생성) */
+function beep(){
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext; if(!Ctx) return;
+    const ctx=beep._ctx||(beep._ctx=new Ctx());
+    if(ctx.state==="suspended") ctx.resume();
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type="sine"; o.frequency.value=880;
+    o.connect(g); g.connect(ctx.destination);
+    const t=ctx.currentTime;
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.25,t+.02);
+    g.gain.exponentialRampToValueAtTime(.0001,t+.4);
+    o.start(t); o.stop(t+.42);
+  }catch(_){}
+}
+
 /* ---------- 렌더링 ---------- */
 function render(records){
+  const changedStalls=detectChanges(records);
   const byStall={};
   const queue=[];
   records.forEach(r=>{
@@ -295,10 +382,12 @@ function render(records){
 
     div.classList.add(info.cls);
 
-    const overdue = (info.cls==="s-work") && isOverdue(r["작업완료"]);
+    const eta = r["작업완료예상"] || r["작업완료"] || "";
+    const request = r["요청사항"] || r["작업자요청사항"] || "";
+    const overdue = (info.cls==="s-work") && isOverdue(eta);
     const delayHTML = (info.cls==="s-part")
       ? `<div class="delay"><span class="dot"></span>부품 입고 지연</div>`
-      : overdue ? `<div class="delay"><span class="dot"></span>작업시간 초과</div>` : "";
+      : overdue ? `<div class="delay"><span class="dot"></span>예상시간 초과</div>` : "";
 
     div.innerHTML=`
       <div class="head">
@@ -313,11 +402,13 @@ function render(records){
         <div class="task">${esc(r["작업내용"]||"")}</div>
         ${delayHTML}
       </div>
+      ${request?`<div class="sec sec-req"><div class="req-label">작업자 요청사항</div><div class="req">${esc(request)}</div></div>`:""}
       ${r["비고"]?`<div class="sec sec-note"><div class="note">${esc(r["비고"])}</div></div>`:""}
       <div class="meta">
         <div class="row"><span>담당</span><b>${esc(r["담당"]||"-")}</b></div>
-        <div class="row"><span>입고 → 작업완료</span><b class="mono">${esc(r["입고시간"]||"-")} → ${esc(r["작업완료"]||"-")}</b></div>
+        <div class="row"><span>입고 → 작업완료예상</span><b class="mono">${esc(r["입고시간"]||"-")} → ${esc(eta||"-")}</b></div>
       </div>`;
+    if(changedStalls.includes(String(i))) div.classList.add("flash");
     grid.appendChild(div);
   }
 
@@ -330,9 +421,10 @@ function render(records){
   if(queue.length){
     q.className="queue filled";
     q.innerHTML=`<span class="qlabel">입고 대기 (${queue.length})</span>`+queue.map(r=>{
-      const urgent=/긴급|urgent/i.test((r["비고"]||"")+(r["작업완료"]||""));
-      // 부가 정보: 작업내용 → 비고 → 작업완료 순으로 있는 것만 표시
-      const detail=[r["작업내용"], (r["비고"]||"").replace(/urgent/i,"긴급"), (r["작업완료"]||"").replace(/urgent/i,"긴급")]
+      const qeta=r["작업완료예상"]||r["작업완료"]||"";
+      const urgent=/긴급|urgent/i.test((r["비고"]||"")+qeta);
+      // 부가 정보: 작업내용 → 비고 → 완료예상 순으로 있는 것만 표시
+      const detail=[r["작업내용"], (r["비고"]||"").replace(/urgent/i,"긴급"), qeta.replace(/urgent/i,"긴급")]
         .map(x=>(x||"").trim()).filter(Boolean).join(" · ");
       const sub=detail?`<span class="qsub">${esc(detail)}</span>`:"";
       return `<span class="qitem${urgent?" urgent":""}">`
