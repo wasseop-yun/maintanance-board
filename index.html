@@ -101,7 +101,8 @@ body{
 .meta .row b{color:var(--txt);font-weight:500}
 .meta .row .mono{font-family:"IBM Plex Mono",monospace}
 .sec-req{border-left:3px solid var(--blue);padding-left:10px}
-.req-label{color:var(--blue);font-size:clamp(11px,.9vw,14px);font-weight:600;margin-bottom:2px}
+.req-label{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--blue);font-size:clamp(11px,.9vw,14px);font-weight:600;margin-bottom:2px}
+.req-label .req-time{color:var(--txt3);font-weight:400;font-size:clamp(10px,.85vw,13px);font-family:"IBM Plex Mono",monospace}
 .req{color:var(--txt);font-size:clamp(13px,1.1vw,18px);line-height:1.4;font-weight:500}
 .sec-note{border-left:3px solid var(--card-line);padding-left:10px}
 .note{color:var(--txt2);font-size:clamp(12px,1vw,17px);line-height:1.4}
@@ -276,6 +277,36 @@ function isOverdue(eta){
   return now>due;
 }
 
+/* ---------- 요청사항 업데이트 시각 추적 ----------
+   요청사항 내용이 바뀐 순간을 감지해 시각을 기록하고 브라우저에 저장.
+   (해당 기기 기준. 대시보드가 켜져 있을 때 변경분을 잡아 기록) */
+const REQ_STORE_KEY="jeongbi_req_times";
+function loadReqTimes(){ try{return JSON.parse(localStorage.getItem(REQ_STORE_KEY))||{};}catch(_){return {};} }
+function saveReqTimes(o){ try{localStorage.setItem(REQ_STORE_KEY, JSON.stringify(o));}catch(_){} }
+/* 스톨번호 i의 현재 요청내용을 받아, 바뀌었으면 시각 갱신 후 표시문자열 반환 */
+function reqTimeFor(i, request){
+  const store=loadReqTimes();
+  const key="s"+i;
+  const rec=store[key];
+  const now=Date.now();
+  if(!request){                       // 요청 없음 → 기록 삭제
+    if(rec){ delete store[key]; saveReqTimes(store); }
+    return "";
+  }
+  if(!rec || rec.text!==request){     // 신규 또는 내용 변경 → 시각 갱신
+    store[key]={text:request, ts:now};
+    saveReqTimes(store);
+    return fmtReqTime(now);
+  }
+  return fmtReqTime(rec.ts);          // 동일 → 기존 시각 유지
+}
+function fmtReqTime(ts){
+  const d=new Date(ts), now=new Date();
+  const hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const sameDay=d.toDateString()===now.toDateString();
+  return sameDay ? hm : `${d.getMonth()+1}/${d.getDate()} ${hm}`;
+}
+
 /* ---------- 변경 감지용 스냅샷 ---------- */
 let prevSnap=null;          // 이전 데이터 지문(스톨/대기별)
 function snapKey(r){
@@ -409,6 +440,7 @@ function render(records){
 
     const eta = r["작업완료예상"] || r["작업완료"] || "";
     const request = (r["요청사항"] || r["작업자요청사항"] || "").trim();
+    const reqTime = reqTimeFor(i, request);
     const overdue = (info.cls==="s-work") && isOverdue(eta);
     const delayHTML = (info.cls==="s-part")
       ? `<div class="delay"><span class="dot"></span>부품 입고 지연</div>`
@@ -427,7 +459,7 @@ function render(records){
         <div class="task">${esc(r["작업내용"]||"")}</div>
         ${delayHTML}
       </div>
-      ${request?`<div class="sec sec-req"><div class="req-label">작업자 요청사항</div><div class="req">${esc(request)}</div></div>`:""}
+      ${request?`<div class="sec sec-req"><div class="req-label">작업자 요청사항${reqTime?`<span class="req-time">${esc(reqTime)} 업데이트</span>`:""}</div><div class="req">${esc(request)}</div></div>`:""}
       ${r["비고"]?`<div class="sec sec-note"><div class="note">${esc(r["비고"])}</div></div>`:""}
       <div class="meta">
         <div class="row"><span>담당</span><b>${esc(r["담당"]||"-")}</b></div>
